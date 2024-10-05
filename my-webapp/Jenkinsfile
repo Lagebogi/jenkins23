@@ -1,0 +1,48 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'contain22/webapp'
+        GITHUB_REPO = 'https://github.com/Lagebogi/website.git'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'master', url: "${GITHUB_REPO}"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'docker run ${DOCKER_IMAGE}:${BUILD_NUMBER} npm test'
+            }
+        }
+
+        stage('Deploy to Production') {
+            when {
+                branch 'master'
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                    sh 'docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}'
+                }
+                sh 'docker run -d -p 80:80 ${DOCKER_IMAGE}:${BUILD_NUMBER}'
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker rmi ${DOCKER_IMAGE}:${BUILD_NUMBER}'
+        }
+    }
+}
+
