@@ -1,0 +1,19 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 14
+      python: 3.8
+    commands:
+      - echo "Installing Apache and other dependencies..."
+      - apt-get update
+      - apt-get install -y apache2
+  build:
+    commands:
+      - echo "Building the website..."
+      - mkdir -p /var/www/html
+      - cp -r * /var/www/html/
+artifacts:
+  files:
+    - '**/*'
